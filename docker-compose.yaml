@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - type: bind
+        source: .
+        target: /root/app
+      - type: volume
+        source: air-tmp
+        target: /root/app/tmp
+    tty: true
+
+volumes:
+  air-tmp:
