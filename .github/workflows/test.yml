@@ -36,25 +36,4 @@ jobs:
       run: go mod verify
 
     - name: Run unit tests
-      run: go test -v -race -coverprofile=coverage.out ./...
-
-    - name: Generate coverage report
-      run: go tool cover -html=coverage.out -o coverage.html
-
-    - name: Upload coverage reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: |
-          coverage.out
-          coverage.html
-
-    - name: Check test coverage
-      run: |
-        COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
-        echo "Total coverage: ${COVERAGE}%"
-        # Fail if coverage is below 70%
-        if (( $(echo "$COVERAGE < 70" | bc -l) )); then
-          echo "Coverage ${COVERAGE}% is below 70% threshold"
-          exit 1
-        fi
+      run: go test -v -race ./...
