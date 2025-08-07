@@ -6,3 +6,6 @@ down:
 
 exec:
 	docker compose exec -it app sh
+
+test:
+	go test -v -race ./...

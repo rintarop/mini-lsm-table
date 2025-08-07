@@ -169,7 +169,9 @@ func (s *LSMTableService) rotateMemTable() error {
 	}
 
 	// Trigger background flush of immutable table to SSTable
-	s.flushImmutableTableInternal()
+	go func() {
+		s.flushImmutableTable()
+	}()
 
 	return nil
 }
