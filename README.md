@@ -1,32 +1,32 @@
 # Mini LSM-Tree Table API Server
 
-A high-performance HTTP API server built on top of the LSM-Tree (Log-Structured Merge Tree) storage engine.
+LSM-Tree (Log-Structured Merge Tree) is a data structure designed for high write throughput and efficient reads. This API server provides a simple key-value store based on the LSM-Tree architecture.
 
-## Features
+## What is LSM-Tree?
 
-- 🚀 **Fast Key-Value Operations**: PUT, GET, DELETE operations
-- 📊 **System Monitoring**: Real-time statistics and health checks
-- 🔄 **Data Recovery**: Automatic recovery from WAL (Write-Ahead Log)
-- 🌐 **RESTful API**: JSON-based HTTP endpoints
-- 💾 **Persistent Storage**: Data persists between server restarts
+LSM-Tree (Log-Structured Merge Tree) is a write-optimized data structure commonly used in modern key-value stores such as LevelDB, RocksDB, and Cassandra. It is designed to deliver:
+
+High write throughput by buffering writes in memory and flushing them to disk in batches.
+
+Efficient reads by organizing data into sorted files and using indexes and Bloom filters to reduce disk I/O.
+
+Instead of writing data directly to disk for every operation, LSM-Trees first store data in memory (e.g., a MemTable) and periodically flush it to disk as immutable sorted files called SSTables (Sorted String Tables). This minimizes random writes and maximizes sequential disk access.
 
 ## Quick Start
 
-### Running the Server
+You can easily start the API server using Docker and Makefile:
 
 ```bash
-go run cmd/main.go
+make up
 ```
 
-The server will start on port `8080` by default. You can change the port by setting the `PORT` environment variable:
+The server will start on port `8080` by default.
+To stop the server, run:
 
 ```bash
-PORT=3000 go run cmd/main.go
+make down
 ```
 
-### API Documentation
-
-Once the server is running, visit `http://localhost:8080/` to see the complete API documentation.
 
 ## API Endpoints
 
@@ -118,67 +118,6 @@ curl -X POST http://localhost:8080/api/recovery
 }
 ```
 
-## Example Usage Scenarios
-
-### Basic CRUD Operations
-```bash
-# Store user data
-curl -X PUT http://localhost:8080/api/put -H "Content-Type: application/json" -d '{"key": "user:alice", "value": "Alice Johnson"}'
-curl -X PUT http://localhost:8080/api/put -H "Content-Type: application/json" -d '{"key": "user:bob", "value": "Bob Smith"}'
-
-# Retrieve user data
-curl http://localhost:8080/api/get/user:alice
-curl http://localhost:8080/api/get/user:bob
-
-# Update user data (overwrite)
-curl -X PUT http://localhost:8080/api/put -H "Content-Type: application/json" -d '{"key": "user:alice", "value": "Alice Johnson-Brown"}'
-
-# Delete user data
-curl -X DELETE http://localhost:8080/api/delete -H "Content-Type: application/json" -d '{"key": "user:bob"}'
-
-# Check if deleted key exists
-curl http://localhost:8080/api/get/user:bob
-```
-
-### Configuration Management
-```bash
-# Store configuration
-curl -X PUT http://localhost:8080/api/put -H "Content-Type: application/json" -d '{"key": "config:database:host", "value": "localhost:5432"}'
-curl -X PUT http://localhost:8080/api/put -H "Content-Type: application/json" -d '{"key": "config:cache:redis", "value": "redis:6379"}'
-curl -X PUT http://localhost:8080/api/put -H "Content-Type: application/json" -d '{"key": "config:app:debug", "value": "true"}'
-
-# Retrieve configuration
-curl http://localhost:8080/api/get/config:database:host
-curl http://localhost:8080/api/get/config:cache:redis
-curl http://localhost:8080/api/get/config:app:debug
-```
-
-### Session Management
-```bash
-# Store session data
-curl -X PUT http://localhost:8080/api/put -H "Content-Type: application/json" -d '{"key": "session:abc123", "value": "{\"user_id\": 42, \"expires\": \"2024-12-31\"}"}'
-
-# Retrieve session
-curl http://localhost:8080/api/get/session:abc123
-
-# Delete expired session
-curl -X DELETE http://localhost:8080/api/delete -H "Content-Type: application/json" -d '{"key": "session:abc123"}'
-```
-
-## Performance Testing
-
-You can test the server performance with many concurrent requests:
-
-```bash
-# Install hey (HTTP load testing tool)
-go install github.com/rakyll/hey@latest
-
-# Test PUT operations
-hey -n 1000 -c 10 -m PUT -H "Content-Type: application/json" -d '{"key": "test:key", "value": "test value"}' http://localhost:8080/api/put
-
-# Test GET operations (after storing some data)
-hey -n 1000 -c 10 http://localhost:8080/api/get/test:key
-```
 
 ## Error Responses
 
@@ -215,25 +154,3 @@ The API server is built on top of a LSM-Tree storage engine with the following c
 - **Compaction**: Background process to merge and optimize SSTables
 - **Block Index**: Efficient key lookup within SSTables
 - **Bloom Filter**: Probabilistic data structure to avoid unnecessary disk reads
-
-## Development
-
-### Building
-```bash
-go build -o mini-lsm-server cmd/main.go
-./mini-lsm-server
-```
-
-### Testing
-```bash
-go test ./...
-```
-
-### Docker Support
-```bash
-# Build image
-docker build -t mini-lsm-server .
-
-# Run container
-docker run -p 8080:8080 mini-lsm-server
-```
