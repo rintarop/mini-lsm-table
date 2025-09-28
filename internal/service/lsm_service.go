@@ -1,4 +1,4 @@
-package usecase
+package service
 
 import (
 	"fmt"
@@ -7,34 +7,34 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Bloom0716/mini-bigtable/internal/domain"
+	"github.com/Bloom0716/mini-bigtable/internal/model"
 )
 
 // LSMTableService represents the application service for LSM-tree operations
 // This coordinates the interaction between different domain components
 type LSMTableService struct {
 	mu                sync.RWMutex
-	activeTable       *domain.MemTable
-	immutableTables   []*domain.MemTable
-	sstablesByLevel   map[int][]*domain.SSTable
-	wal               *domain.WAL
+	activeTable       *model.MemTable
+	immutableTables   []*model.MemTable
+	sstablesByLevel   map[int][]*model.SSTable
+	wal               *model.WAL
 	walDir            string
 	sstableDir        string
 	maxTableSize      int
 	walCounter        int
-	compactionManager *domain.CompactionManager
+	compactionManager *model.CompactionManager
 }
 
 // NewLSMTableService creates a new LSM-tree table service
 func NewLSMTableService(dataDir string, maxTableSize int) (*LSMTableService, error) {
 	service := &LSMTableService{
-		immutableTables:   make([]*domain.MemTable, 0),
-		sstablesByLevel:   make(map[int][]*domain.SSTable),
+		immutableTables:   make([]*model.MemTable, 0),
+		sstablesByLevel:   make(map[int][]*model.SSTable),
 		walDir:            filepath.Join(dataDir, "wal"),
 		sstableDir:        filepath.Join(dataDir, "sstables"),
 		maxTableSize:      maxTableSize,
 		walCounter:        0,
-		compactionManager: domain.NewCompactionManager(domain.LeveledCompaction),
+		compactionManager: model.NewCompactionManager(model.LeveledCompaction),
 	}
 
 	if err := service.createNewActiveTable(); err != nil {
@@ -50,14 +50,14 @@ func (s *LSMTableService) Put(key, value []byte) error {
 	defer s.mu.Unlock()
 
 	// Write to WAL first for durability
-	entry := domain.NewPutEntry(key, value)
+	entry := model.NewPutEntry(key, value)
 	if err := s.wal.WriteEntry(entry); err != nil {
 		return fmt.Errorf("failed to write to WAL: %w", err)
 	}
 
 	// Try to put in active memtable
 	if err := s.activeTable.Put(key, value); err != nil {
-		if err == domain.ErrTableFull {
+		if err == model.ErrTableFull {
 			// Rotate the memtable
 			if err := s.rotateMemTable(); err != nil {
 				return fmt.Errorf("failed to rotate memtable: %w", err)
@@ -87,7 +87,7 @@ func (s *LSMTableService) Get(key []byte) ([]byte, error) {
 	// Check active memtable first
 	if entry, err := s.activeTable.Get(key); err == nil {
 		if entry.IsDeleted() {
-			return nil, domain.ErrKeyNotFound
+			return nil, model.ErrKeyNotFound
 		}
 		return entry.Value(), nil
 	}
@@ -96,7 +96,7 @@ func (s *LSMTableService) Get(key []byte) ([]byte, error) {
 	for i := len(s.immutableTables) - 1; i >= 0; i-- {
 		if entry, err := s.immutableTables[i].Get(key); err == nil {
 			if entry.IsDeleted() {
-				return nil, domain.ErrKeyNotFound
+				return nil, model.ErrKeyNotFound
 			}
 			return entry.Value(), nil
 		}
@@ -110,14 +110,14 @@ func (s *LSMTableService) Get(key []byte) ([]byte, error) {
 		for i := len(tables) - 1; i >= 0; i-- { // Check newest first
 			if entry, err := tables[i].Get(key); err == nil && entry != nil {
 				if entry.IsDeleted() {
-					return nil, domain.ErrKeyNotFound
+					return nil, model.ErrKeyNotFound
 				}
 				return entry.Value(), nil
 			}
 		}
 	}
 
-	return nil, domain.ErrKeyNotFound
+	return nil, model.ErrKeyNotFound
 }
 
 // Delete marks a key as deleted in the LSM-tree
@@ -126,14 +126,14 @@ func (s *LSMTableService) Delete(key []byte) error {
 	defer s.mu.Unlock()
 
 	// Write to WAL first for durability
-	entry := domain.NewDeleteEntry(key)
+	entry := model.NewDeleteEntry(key)
 	if err := s.wal.WriteEntry(entry); err != nil {
 		return fmt.Errorf("failed to write to WAL: %w", err)
 	}
 
 	// Try to delete in active memtable
 	if err := s.activeTable.Delete(key); err != nil {
-		if err == domain.ErrTableFull {
+		if err == model.ErrTableFull {
 			// Rotate the memtable
 			if err := s.rotateMemTable(); err != nil {
 				return fmt.Errorf("failed to rotate memtable: %w", err)
@@ -201,7 +201,7 @@ func (s *LSMTableService) flushImmutableTableInternal() {
 	}
 
 	// Build SSTable
-	builder := domain.NewSSTableBuilder(0, uint32(len(entries)))
+	builder := model.NewSSTableBuilder(0, uint32(len(entries)))
 	for _, entry := range entries {
 		builder.AddEntry(entry)
 	}
@@ -245,7 +245,7 @@ func (s *LSMTableService) runCompaction() {
 }
 
 // updateSSTablesAfterCompaction updates the SSTable registry after compaction
-func (s *LSMTableService) updateSSTablesAfterCompaction(task *domain.CompactionTask, outputTables []*domain.SSTable) {
+func (s *LSMTableService) updateSSTablesAfterCompaction(task *model.CompactionTask, outputTables []*model.SSTable) {
 	// Remove input SSTables from their levels
 	for _, inputTable := range task.InputSSTables {
 		level := inputTable.Metadata().Level
@@ -281,7 +281,7 @@ func (s *LSMTableService) createNewActiveTable() error {
 
 	// Create new WAL
 	walFilename := fmt.Sprintf("wal_%d.log", s.walCounter)
-	wal, err := domain.NewWAL(s.walDir, walFilename)
+	wal, err := model.NewWAL(s.walDir, walFilename)
 	if err != nil {
 		return fmt.Errorf("failed to create new WAL: %w", err)
 	}
@@ -289,7 +289,7 @@ func (s *LSMTableService) createNewActiveTable() error {
 	s.walCounter++
 
 	// Create new active memtable
-	s.activeTable = domain.NewMemTable(s.maxTableSize)
+	s.activeTable = model.NewMemTable(s.maxTableSize)
 
 	return nil
 }
@@ -331,7 +331,7 @@ func (s *LSMTableService) Recovery() error {
 		for _, entry := range entries {
 			if entry.IsDeleted() {
 				if err := s.activeTable.Delete(entry.Key()); err != nil {
-					if err == domain.ErrTableFull {
+					if err == model.ErrTableFull {
 						if err := s.rotateMemTable(); err != nil {
 							return fmt.Errorf("failed to rotate memtable during recovery: %w", err)
 						}
@@ -344,7 +344,7 @@ func (s *LSMTableService) Recovery() error {
 				}
 			} else {
 				if err := s.activeTable.Put(entry.Key(), entry.Value()); err != nil {
-					if err == domain.ErrTableFull {
+					if err == model.ErrTableFull {
 						if err := s.rotateMemTable(); err != nil {
 							return fmt.Errorf("failed to rotate memtable during recovery: %w", err)
 						}

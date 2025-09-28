@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Bloom0716/mini-bigtable/internal/usecase"
+	"github.com/Bloom0716/mini-bigtable/internal/service"
 )
 
 func setupTestHandler(t *testing.T) (*Handler, func()) {
@@ -17,7 +17,7 @@ func setupTestHandler(t *testing.T) (*Handler, func()) {
 	tmpDir := filepath.Join(os.TempDir(), "test_lsm_http")
 
 	// Create LSM service
-	service, err := usecase.NewLSMTableService(tmpDir, 10)
+	service, err := service.NewLSMTableService(tmpDir, 10)
 	if err != nil {
 		t.Fatalf("Failed to create LSM service: %v", err)
 	}

@@ -1,4 +1,4 @@
-package domain
+package model
 
 import (
 	"errors"
@@ -87,8 +87,7 @@ func (mt *MemTable) Get(key []byte) (*Entry, error) {
 	mt.mu.RLock()
 	defer mt.mu.RUnlock()
 
-	keyStr := string(key)
-	entry, exists := mt.entries[keyStr]
+	entry, exists := mt.entries[string(key)]
 	if !exists {
 		return nil, ErrKeyNotFound
 	}

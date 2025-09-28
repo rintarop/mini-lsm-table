@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	httpHandler "github.com/Bloom0716/mini-bigtable/internal/interface/http"
-	"github.com/Bloom0716/mini-bigtable/internal/usecase"
+	"github.com/Bloom0716/mini-bigtable/internal/service"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 	dataDir := filepath.Join("data", "mini_lsm")
 
 	// Create LSM service
-	service, err := usecase.NewLSMTableService(dataDir, 100)
+	service, err := service.NewLSMTableService(dataDir, 3)
 	if err != nil {
 		log.Fatalf("Failed to create LSM service: %v", err)
 	}
