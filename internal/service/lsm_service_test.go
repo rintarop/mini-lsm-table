@@ -1,11 +1,11 @@
-package usecase
+package service
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/Bloom0716/mini-bigtable/internal/domain"
+	"github.com/Bloom0716/mini-bigtable/internal/model"
 )
 
 func TestLSMTableServiceBasicOperations(t *testing.T) {
@@ -62,7 +62,7 @@ func TestLSMTableServiceDelete(t *testing.T) {
 
 	// Get should return key not found
 	_, err = service.Get(key)
-	if err != domain.ErrKeyNotFound {
+	if err != model.ErrKeyNotFound {
 		t.Errorf("Expected ErrKeyNotFound, got %v", err)
 	}
 }
@@ -224,7 +224,7 @@ func TestLSMTableServiceRecovery(t *testing.T) {
 
 	// key2 should be deleted
 	_, err = service2.Get([]byte("key2"))
-	if err != domain.ErrKeyNotFound {
+	if err != model.ErrKeyNotFound {
 		t.Errorf("Expected key2 to be deleted after recovery, got error: %v", err)
 	}
 }

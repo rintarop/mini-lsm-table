@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Bloom0716/mini-bigtable/internal/usecase"
+	"github.com/Bloom0716/mini-bigtable/internal/service"
 )
 
 // Handler represents the HTTP handler for LSM-tree operations
 type Handler struct {
-	service *usecase.LSMTableService
+	service *service.LSMTableService
 }
 
 // Request/Response structures
@@ -41,7 +41,7 @@ type ErrorResponse struct {
 }
 
 // NewHandler creates a new HTTP handler
-func NewHandler(service *usecase.LSMTableService) *Handler {
+func NewHandler(service *service.LSMTableService) *Handler {
 	return &Handler{
 		service: service,
 	}
